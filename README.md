@@ -4,7 +4,7 @@ This library provide numerical integration method by Double Exponential (DE) for
 
 For example:
 
-```
+```d
 // integration on [0, 1]
 auto int01 = DEInt!real(0, 1);
 
