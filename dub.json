@@ -1,0 +1,9 @@
+{
+	"name": "deint",
+	"authors": [
+		"Kazuki Komatsu"
+	],
+	"description": "Double Exponential Numerical Integration Library",
+	"copyright": "Copyright © 2018, Kazuki Komatsu",
+	"license": "CC0"
+}
