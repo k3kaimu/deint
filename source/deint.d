@@ -7,6 +7,7 @@ module deint;
 
 import std.algorithm;
 import std.array;
+import std.functional;
 import std.math;
 import std.typecons;
 
@@ -26,51 +27,48 @@ import std.typecons;
  */
 struct DEInt(F)
 {
+    private static
+    F returnConst1(F x) { return F(1); }
+
+
     /** Initialize an object for computing DE integration.
      * Params:
      * 		xa = starting value of original integration.
      *      xb = end value of original integration.
-     *      isExpType = if the integration is formed as int_a^b f(x) exp(-x) dx, this value is Yes. otherwise No.
+     *      isExpDecay = if the integration is formed as int_a^b f(x) exp(-x) dx, this value is Yes. otherwise No.
      *      trapN = division points of trapezoidal quadrature. If this value is 0, 100 is used internally.
      *      ta = starting value of integration transformed by DE-formula. If this value is NaN, -5 is used internally.
      *      tb = starting value of integration transformed by DE-formula. If this value is NaN, +5 is used internally.
      */
     this(
         F xa, F xb,
-        Flag!"isExpType" isExpType = No.isExpType,
-        size_t trapN = 0,
-        F ta = F.nan, F tb = F.nan)
+        scope F delegate(F) weightFn = toDelegate(&returnConst1),
+        Flag!"isExpDecay" isExpDecay = No.isExpDecay,
+        size_t trapN = 100,
+        F ta = -5, F tb = 5)
     {
-        setParams(xa, xb, isExpType, trapN, ta, tb);
+        setParams(xa, xb, weightFn, isExpDecay, trapN, ta, tb);
     }
 
 
     /// ditto
     void setParams(
         F xa, F xb,
-        Flag!"isExpType" isExpType = No.isExpType,
-        size_t trapN = 0,
-        F ta = F.nan, F tb = F.nan)
+        scope F delegate(F) weightFn = toDelegate(&returnConst1),
+        Flag!"isExpDecay" isExpDecay = No.isExpDecay,
+        size_t trapN = 100,
+        F ta = -5, F tb = 5)
     in{
-        if(isExpType)
+        if(isExpDecay)
             assert(_xa != -F.infinity);
     }
     do {
-        if(trapN == 0) {
-            trapN = 100;
-        }
-
-        if(ta.isNaN && tb.isNaN) {
-            ta = -5;
-            tb = 5;
-        }
-
         if(xa > xb) {
-            this.setParams(xb, xa, isExpType, trapN, ta, tb);
+            this.setParams(xb, xa, weightFn, isExpDecay, trapN, ta, tb);
             _weights = _weights.map!"cast(immutable)(-a)".array;
         } else if(xa == -F.infinity && xb != F.infinity) {
-            assert(!isExpType);
-            this.setParams(-xb, F.infinity, isExpType, trapN, ta, tb);
+            //assert(!isExpDecay);
+            this.setParams(-xb, F.infinity, (F x) => weightFn(-x), isExpDecay, trapN, ta, tb);
             _xs = _xs.map!"cast(immutable)(-a)".array;
         }
 
@@ -79,34 +77,31 @@ struct DEInt(F)
         _ta = ta;
         _tb = tb;
         _trapN = trapN;
-        _isExpType = cast(bool)isExpType;
+        _isExpDecay = cast(bool)isExpDecay;
 
         if(_xs !is null)
             return;
 
 
         if(xa == -F.infinity && xb == F.infinity){
-            assert(!isExpType);
+            assert(!isExpDecay);
 
-            auto params = _makeParamsImpl(ta, tb, trapN, delegate(F t){
+            auto params = _makeParamsImpl(ta, tb, trapN, weightFn, delegate(F t){
                 immutable F
                     sinht = sinh(t),
                     x = sinh(PI / 2 * sinht),
                     dx = cosh(PI / 2 * sinht) * PI / 2 * cosh(t);
 
-                if(!isExpType)
-                    return cast(F[2])[x, dx];
-                else
-                    return cast(F[2])[x, exp(-x) * dx];
+                return cast(F[2])[x, dx];
             });
 
 
             _xs = params[0];
             _weights = params[1];
-            _intType = isExpType ? "IIE" : "II";
+            _intType = isExpDecay ? "IIE" : "II";
         }else if(xb == F.infinity) {
-            auto params = _makeParamsImpl(ta, tb, trapN, delegate(F t){
-                if(!isExpType){
+            auto params = _makeParamsImpl(ta, tb, trapN, weightFn, delegate(F t){
+                if(!isExpDecay){
                     real x = exp(PI / 2 * sinh(t)),
                          dx = x * PI / 2 * cosh(t);
 
@@ -117,18 +112,18 @@ struct DEInt(F)
                          dx = (1 + expmt) * x;
 
 
-                    return cast(F[2])[x + xa, exp(-(x + xa)) * dx]; 
+                    return cast(F[2])[x + xa, dx]; 
                 }
             });
 
             _xs = params[0];
             _weights = params[1];
-            _intType = isExpType ? "FIE" : "FI";
+            _intType = isExpDecay ? "FIE" : "FI";
         }else{
             immutable F diff2 = (xb - xa) / 2,
                         avg2 = (xb + xa) / 2;
 
-            auto params = _makeParamsImpl(ta, tb, trapN, delegate(F t){
+            auto params = _makeParamsImpl(ta, tb, trapN, weightFn, delegate(F t){
                 immutable F
                     cosht = cosh(t),
                     sinht = sinh(t),
@@ -136,15 +131,12 @@ struct DEInt(F)
                     cosh2 = cosh(PI / 2 * sinht)^^2,
                     dx = PI / 2 * cosht / cosh2;
 
-                if(!isExpType)
-                    return cast(F[2])[x, dx * diff2];
-                else
-                    return cast(F[2])[x, exp(-x) * dx * diff2];
+                return cast(F[2])[x, dx * diff2];
             });
 
             _xs = params[0];
             _weights = params[1];
-            _intType = isExpType ? "FFE" : "FF";
+            _intType = isExpDecay ? "FFE" : "FF";
         }
     }
 
@@ -171,22 +163,22 @@ struct DEInt(F)
     string type() { return _intType; }
 
     /// Return the set value
-    real xa() { return _xa; }
+    F xa() { return _xa; }
 
     /// ditto
-    real xb() { return _xb; }
+    F xb() { return _xb; }
 
     /// ditto
-    real ta() { return _ta; }
+    F ta() { return _ta; }
 
     /// ditto
-    real tb() { return _tb; }
+    F tb() { return _tb; }
 
     /// ditto
     size_t trapN() { return _trapN; }
 
     /// ditto
-    bool isExpType() { return _isExpType; }
+    bool isExpDecay() { return _isExpDecay; }
 
     /// Return division points (computing points) of trapezoidal quadrature for DE formula.
     immutable(F)[] xs() { return _xs; }
@@ -198,21 +190,21 @@ struct DEInt(F)
 
   private:
     string _intType;
-    real _xa, _xb, _ta, _tb;
+    F _xa, _xb, _ta, _tb;
     size_t _trapN;
-    bool _isExpType;
+    bool _isExpDecay;
     immutable(F)[] _xs;
     immutable(F)[] _weights;
 
     static
-    immutable(F)[][2] _makeParamsImpl(F ta, F tb, size_t trapN, scope F[2] delegate(F) fn)
+    immutable(F)[][2] _makeParamsImpl(F ta, F tb, size_t trapN, scope F delegate(F) weightFn, scope F[2] delegate(F) fn)
     {
         immutable(F)[] xs, weights;
         immutable F h = (tb - ta) / (trapN-1);
         foreach(i; 0 .. trapN) {
             immutable xWt = fn(i * h + ta);
             xs ~= xWt[0];
-            weights ~= xWt[1] * h;
+            weights ~= xWt[1] * h * weightFn(xWt[0]);
         }
 
         return [xs, weights];
@@ -242,7 +234,7 @@ unittest
 
 	import std.mathspecial;
 	// integration int_1^inf x * exp(-x) dx = Gamma(2, 1)
-	auto intFI = DEInt!real(1, real.infinity, Yes.isExpType);
+	auto intFI = DEInt!real(1, real.infinity, (real x) => exp(-x), Yes.isExpDecay);
 	assert(intFI.type == "FIE");
 
 	// incomplete gamma function
@@ -337,8 +329,20 @@ unittest
 // int exp(-x^2) = sqrt(pi)
 unittest
 {
-    immutable val = DEInt!real(0, real.infinity, Yes.isExpType, 100)
+    immutable val1 = DEInt!real(0, real.infinity, (real x) => exp(-x), Yes.isExpDecay, 100)
         .integrate((real x) => 1.0/(2*sqrt(x)));
 
-    assert(approxEqual(val, sqrt(PI)/2));
+    immutable val2 = DEInt!real(real.infinity, 0, (real x) => exp(-x), Yes.isExpDecay, 100)
+        .integrate((real x) => -1.0/(2*sqrt(x)));
+
+    immutable val3 = DEInt!real(-real.infinity, 0, (real x) => exp(x), Yes.isExpDecay, 100)
+        .integrate((real x) => 1.0/(2*sqrt(-x)));
+
+    immutable val4 = DEInt!real(0, -real.infinity, (real x) => exp(x), Yes.isExpDecay, 100)
+        .integrate((real x) => -1.0/(2*sqrt(-x)));
+
+    assert(approxEqual(val1, sqrt(PI)/2));
+    assert(approxEqual(val2, sqrt(PI)/2));
+    assert(approxEqual(val3, sqrt(PI)/2));
+    assert(approxEqual(val4, sqrt(PI)/2));
 }
