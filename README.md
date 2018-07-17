@@ -6,6 +6,12 @@ On DE formula, a integration is approximated as Eq. (1),
 
 <img src="https://latex.codecogs.com/gif.latex?(1)&space;\int_{a}^{b}&space;f(x)&space;w(x)&space;dx&space;\approx&space;\int_{t_a}^{t_b}&space;f(\phi(t))w(\phi(t))&space;\phi'(t)&space;dt&space;\approx&space;\sum_{k=0}^{N-1}&space;f(x_k)w_k" title="(1) \int_{a}^{b} f(x) w(x) dx \approx \int_{t_a}^{t_b} f(\phi(t))w(\phi(t)) \phi'(t) dt \approx \sum_{k=0}^{N-1} f(x_k)w_k" />
 
+where
+
+<img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{t_b&space;-&space;t_a}{N-1}k&space;&plus;&space;t_a" title="t_k = \frac{t_b - t_a}{N-1}k + t_a" />, 
+<img src="https://latex.codecogs.com/gif.latex?x_k&space;=&space;\phi(t_k)" title="x_k = \phi(t_k)" />, 
+<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{t_b-t_a}{N-1}&space;w(\phi(t_k))&space;\phi'(t_k)" title="w_k = \frac{t_b-t_a}{N-1} w(\phi(t_k)) \phi'(t_k)" />.
+
 In this library, Eq.(1) can computed by the following code:
 
 ```d
@@ -34,9 +40,9 @@ where
 
 and 
 
-<img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{10k}{99}" title="t_k = \frac{10k}{99}" />, 
+<img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{10}{99}k-5" title="t_k = \frac{10}{99}k-5" />, 
 <img src="https://latex.codecogs.com/gif.latex?x_k&space;=&space;\phi(t_k)" title="x_k = \phi(t_k)" />, 
-<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)" title="w_k = \frac{10}{99} \phi'(t_k)" />
+<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)" title="w_k = \frac{10}{99} \phi'(t_k)" />.
 
 
 ```d
@@ -64,9 +70,9 @@ where
 
 and 
 
-<img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{10k}{99}" title="t_k = \frac{10k}{99}" />, 
+<img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{10}{99}k-5" title="t_k = \frac{10}{99}k-5" />, 
 <img src="https://latex.codecogs.com/gif.latex?x_k&space;=&space;\phi(t_k)" title="x_k = \phi(t_k)" />, 
-<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)" title="w_k = \frac{10}{99} \phi'(t_k)" />
+<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)" title="w_k = \frac{10}{99} \phi'(t_k)" />.
 
 
 ```d
@@ -89,9 +95,9 @@ where
 
 and 
 
-<img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{10k}{99}" title="t_k = \frac{10k}{99}" />, 
+<img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{10}{99}k-5" title="t_k = \frac{10}{99}k-5" />, 
 <img src="https://latex.codecogs.com/gif.latex?x_k&space;=&space;\phi(t_k)" title="x_k = \phi(t_k)" />, 
-<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)&space;\exp(-\phi(t_k))" title="w_k = \frac{10}{99} \phi'(t_k) \exp(-\phi(t_k))" />
+<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)&space;\exp(-\phi(t_k))" title="w_k = \frac{10}{99} \phi'(t_k) \exp(-\phi(t_k))" />.
 
 ```d
 // integrate f(x)exp(-x) on (1, inf)
