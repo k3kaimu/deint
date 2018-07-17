@@ -16,8 +16,8 @@ import std.typecons;
 /** A struct for performing numerical integration by double-exponential (DE) formula.
  * It is also known as "Tanh-sinh quadrature".
  * In DE formula, the integration (1) is converted to (2).
- * (1) int_{xa}^{xb} f(x) dx
- * (2) int_{ta}^{tb} f(g(t)) g'(t) dt
+ * (1) int_{xa}^{xb} f(x) w(x) dx
+ * (2) int_{ta}^{tb} f(g(t)) w(g(t)) g'(t) dt
  * 
  * This struct calculates reusable state in advance.
  * The type of DE formula is automatically decided from the given interval of the integration.
@@ -35,10 +35,11 @@ struct DEInt(F)
      * Params:
      * 		xa = starting value of original integration.
      *      xb = end value of original integration.
+     *      weightFn = weight function. The default value of this parameter is `(F x) => F(1)`.
      *      isExpDecay = if the integration is formed as int_a^b f(x) exp(-x) dx, this value is Yes. otherwise No.
-     *      trapN = division points of trapezoidal quadrature. If this value is 0, 100 is used internally.
-     *      ta = starting value of integration transformed by DE-formula. If this value is NaN, -5 is used internally.
-     *      tb = starting value of integration transformed by DE-formula. If this value is NaN, +5 is used internally.
+     *      trapN = division points of trapezoidal quadrature.
+     *      ta = starting value of integration transformed by DE-formula.
+     *      tb = starting value of integration transformed by DE-formula.
      */
     this(
         F xa, F xb,
