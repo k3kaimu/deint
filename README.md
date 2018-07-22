@@ -102,7 +102,7 @@ and
 ```d
 // integrate f(x)exp(-x) on (1, inf)
 // Now, we know that the integrand f(x)exp(-x) decay exponentially.
-auto intFI = DEInt!real(1, real.infinity, Yes.isExpDecay);
+auto intFI = DEInt!real(1, real.infinity, (real x) => exp(-x), Yes.isExpDecay);
 
 // incomplete gamma function
 assert(intFI.integrate((real x) => x).approxEqual(gammaIncompleteCompl(2, 1) * gamma(2)));
