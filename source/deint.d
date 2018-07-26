@@ -12,7 +12,6 @@ import std.math;
 import std.typecons;
 
 
-
 /** A struct for performing numerical integration by double-exponential (DE) formula.
  * It is also known as "Tanh-sinh quadrature".
  * In DE formula, the integration (1) is converted to (2).
@@ -25,15 +24,15 @@ import std.typecons;
  * Reference:
  * $(HTTP en.wikipedia.org/wiki/Tanh-sinh_quadrature)
  */
-struct DEInt(F)
+struct DEInt(F, W = F)
 {
     private static
-    F returnConst1(F x) { return F(1); }
+    W returnConst1(F x) { return W(1); }
 
 
     /** Initialize an object for computing DE integration.
      * Params:
-     * 		xa = starting value of original integration.
+     *      xa = starting value of original integration.
      *      xb = end value of original integration.
      *      weightFn = weight function. The default value of this parameter is `(F x) => F(1)`.
      *      isExpDecay = if the integration is formed as int_a^b f(x) exp(-x) dx, this value is Yes. otherwise No.
@@ -43,7 +42,7 @@ struct DEInt(F)
      */
     this(
         F xa, F xb,
-        scope F delegate(F) weightFn = toDelegate(&returnConst1),
+        scope W delegate(F) weightFn = toDelegate(&returnConst1),
         Flag!"isExpDecay" isExpDecay = No.isExpDecay,
         size_t trapN = 100,
         F ta = -5, F tb = 5)
@@ -55,7 +54,7 @@ struct DEInt(F)
     /// ditto
     void setParams(
         F xa, F xb,
-        scope F delegate(F) weightFn = toDelegate(&returnConst1),
+        scope W delegate(F) weightFn = toDelegate(&returnConst1),
         Flag!"isExpDecay" isExpDecay = No.isExpDecay,
         size_t trapN = 100,
         F ta = -5, F tb = 5)
@@ -82,7 +81,6 @@ struct DEInt(F)
 
         if(_xs !is null)
             return;
-
 
         if(xa == -F.infinity && xb == F.infinity){
             assert(!isExpDecay);
@@ -145,9 +143,9 @@ struct DEInt(F)
 
     /** Execute integration of func by DE formula.
     */
-    F integrate(Fn)(scope Fn func) const
+    T integrate(T = W, Fn)(scope Fn func) const
     {
-        F sum = 0;
+        T sum = 0;
         foreach(i; 0 .. _xs.length)
             sum += func(_xs[i]) * _weights[i];
 
@@ -185,7 +183,7 @@ struct DEInt(F)
     immutable(F)[] xs() { return _xs; }
 
     /// Return weights of each division points.
-    immutable(F)[] weights() { return _weights; }
+    immutable(W)[] weights() { return _weights; }
   }
 
 
@@ -195,12 +193,13 @@ struct DEInt(F)
     size_t _trapN;
     bool _isExpDecay;
     immutable(F)[] _xs;
-    immutable(F)[] _weights;
+    immutable(W)[] _weights;
 
     static
-    immutable(F)[][2] _makeParamsImpl(F ta, F tb, size_t trapN, scope F delegate(F) weightFn, scope F[2] delegate(F) fn)
+    Tuple!(immutable(F)[], immutable(W)[]) _makeParamsImpl(F ta, F tb, size_t trapN, scope W delegate(F) weightFn, scope F[2] delegate(F) fn)
     {
-        immutable(F)[] xs, weights;
+        immutable(F)[] xs;
+        immutable(W)[] weights;
         immutable F h = (tb - ta) / (trapN-1);
         foreach(i; 0 .. trapN) {
             immutable xWt = fn(i * h + ta);
@@ -208,7 +207,7 @@ struct DEInt(F)
             weights ~= xWt[1] * h * weightFn(xWt[0]);
         }
 
-        return [xs, weights];
+        return tuple(xs, weights);
     }
 }
 
@@ -346,4 +345,16 @@ unittest
     assert(approxEqual(val2, sqrt(PI)/2));
     assert(approxEqual(val3, sqrt(PI)/2));
     assert(approxEqual(val4, sqrt(PI)/2));
+}
+
+// int exp(-x^2) * 1i = 1i * sqrt(pi)
+unittest
+{
+    import std.complex : Complex;
+
+    immutable val1 = DEInt!(real, Complex!real)(0, real.infinity, ((real x) => exp(-x)*Complex!real(0, 1)), Yes.isExpDecay, 100)
+        .integrate((real x) => 1.0/(2*sqrt(x)));
+
+    assert(val1.re.approxEqual(0));
+    assert(val1.im.approxEqual(sqrt(PI)/2));
 }
