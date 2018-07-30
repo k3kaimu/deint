@@ -4,26 +4,28 @@ This library provides a numerical integration method by Double Exponential (DE) 
 
 On DE formula, a integration is approximated as Eq. (1),
 
-<img src="https://latex.codecogs.com/gif.latex?(1)&space;\int_{a}^{b}&space;f(x)&space;w(x)&space;dx&space;\approx&space;\int_{t_a}^{t_b}&space;f(\phi(t))w(\phi(t))&space;\phi'(t)&space;dt&space;\approx&space;\sum_{k=0}^{N-1}&space;f(x_k)w_k" title="(1) \int_{a}^{b} f(x) w(x) dx \approx \int_{t_a}^{t_b} f(\phi(t))w(\phi(t)) \phi'(t) dt \approx \sum_{k=0}^{N-1} f(x_k)w_k" />
+<img src="https://latex.codecogs.com/gif.latex?(1)&space;\int_{a}^{b}&space;f(x)&space;dx&space;\approx&space;\int_{t_a}^{t_b}&space;f(\phi(t))\phi'(t)&space;dt&space;\approx&space;\sum_{k=0}^{N-1}&space;f(x_k)w_k" title="(1) \int_{a}^{b} f(x) w(x) dx \approx \int_{t_a}^{t_b} f(\phi(t))\phi'(t) dt \approx \sum_{k=0}^{N-1} f(x_k)w_k" />
 
 where
 
 <img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{t_b&space;-&space;t_a}{N-1}k&space;&plus;&space;t_a" title="t_k = \frac{t_b - t_a}{N-1}k + t_a" />, 
 <img src="https://latex.codecogs.com/gif.latex?x_k&space;=&space;\phi(t_k)" title="x_k = \phi(t_k)" />, 
-<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{t_b-t_a}{N-1}&space;w(\phi(t_k))&space;\phi'(t_k)" title="w_k = \frac{t_b-t_a}{N-1} w(\phi(t_k)) \phi'(t_k)" />.
+<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{t_b-t_a}{N-1}&space;\phi'(t_k)" title="w_k = \frac{t_b-t_a}{N-1} \phi'(t_k)" />.
 
 In this library, Eq.(1) can computed by the following code:
 
 ```d
+import deint;
+
 // Now we assume that a, b, w, N, t_a, t_b, and f are defined as Eq.(1).
-auto deint = DEInt!real(a, b, (real x) => w(x), No.isExpDecay, N, t_a, t_b);
+auto deint = makeDEInt!real(a, b, No.isExpDecay, N, t_a, t_b);
 
 // compute Eq.(1)
 real ans = deint.integrate((real x) => f(x));
 ```
 
-* The default values of `w`, `N`, `t_a`, and `t_b` are `(real x) => 1`, `100`, `-5`, and `5`, respectively.
-* If the integrand function `f(x)w(x)` is an exponential-decay function on `|x| -> infinity`, you should change the flag `No.isExpDecay` to `Yes.isExpDecay`.
+* The default values of `N`, `t_a`, and `t_b` are `100`, `-5`, and `5`, respectively.
+* If the integrand function `f(x)` is an exponential-decay function on `|x| -> infinity`, you should change the flag `No.isExpDecay` to `Yes.isExpDecay`.
 
 
 For example:
@@ -47,7 +49,7 @@ and
 
 ```d
 // DEInt!real is a struct which computes x_k and w_k in advance.
-auto int01 = DE!real(0, 1);
+auto int01 = makeDEInt!real(0, 1);
 
 // When f(x) = x, int_0^1 x dx = 0.5
 assert(int01.integrate((real x) => x).approxEqual(0.5));
@@ -77,15 +79,15 @@ and
 
 ```d
 // integration on [-inf, inf]
-auto intII = DEInt!real(-real.infinity, real.infinity);
+auto intII = makeDEInt!real(-real.infinity, real.infinity);
 
 // Gaussian integral
 assert(intII.integrate((real x) => exp(-x^^2)).approxEqual(sqrt(PI)));
 ```
 
-+ Integrate f(x)exp(-x) on (1, inf)
++ Integrate f(x) = g(x) exp(-x) on (1, inf)
 
-<img src="https://latex.codecogs.com/gif.latex?\int_{1}^{\infty}&space;f(x)&space;\exp(-x)&space;dx&space;\approx&space;\int_{-5}^{5}&space;f(\phi(t))&space;\phi'(t)&space;\exp(-\phi(t))&space;dt&space;\approx&space;\sum_{k=0}^{99}&space;f(x_k)&space;w_k" title="\int_{1}^{\infty} f(x) \exp(-x) dx \approx \int_{-5}^{5} f(\phi(t)) \phi'(t) \exp(-\phi(t)) dt \approx \sum_{k=0}^{99} f(x_k) w_k" />
+<img src="https://latex.codecogs.com/gif.latex?\int_{1}^{\infty}&space;f(x)&space;dx&space;\approx&space;\int_{-5}^{5}&space;f(\phi(t))&space;\phi'(t)&space;dt&space;\approx&space;\sum_{k=0}^{99}&space;f(x_k)&space;w_k" title="\int_{1}^{\infty} f(x) \exp(-x) dx \approx \int_{-5}^{5} f(\phi(t)) \exp(-\phi(t)) \phi'(t) dt \approx \sum_{k=0}^{99} f(x_k) w_k" />
 
 where
 
@@ -97,13 +99,22 @@ and
 
 <img src="https://latex.codecogs.com/gif.latex?t_k&space;=&space;\frac{10}{99}k-5" title="t_k = \frac{10}{99}k-5" />, 
 <img src="https://latex.codecogs.com/gif.latex?x_k&space;=&space;\phi(t_k)" title="x_k = \phi(t_k)" />, 
-<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)&space;\exp(-\phi(t_k))" title="w_k = \frac{10}{99} \phi'(t_k) \exp(-\phi(t_k))" />.
+<img src="https://latex.codecogs.com/gif.latex?w_k&space;=&space;\frac{10}{99}&space;\phi'(t_k)" title="w_k = \frac{10}{99} \phi'(t_k)" />.
 
 ```d
-// integrate f(x)exp(-x) on (1, inf)
-// Now, we know that the integrand f(x)exp(-x) decay exponentially.
-auto intFI = DEInt!real(1, real.infinity, (real x) => exp(-x), Yes.isExpDecay);
+// integrate f(x) = g(x)exp(-x) on (1, inf)
+// Now, we know that the integrand f(x) decay exponentially.
+auto intFI = makeDEInt!real(1, real.infinity, Yes.isExpDecay);
 
 // incomplete gamma function
-assert(intFI.integrate((real x) => x).approxEqual(gammaIncompleteCompl(2, 1) * gamma(2)));
+assert(intFI.integrate((real x) => x * exp(-x)).approxEqual(gammaIncompleteCompl(2, 1) * gamma(2)));
+
+// Also, we can use `withWeight` which pre-computes and stores weight function.
+// The `withWeight` is useful when integrands have same weights.
+auto intFIW = intFI.withWeight((real x) => exp(-x));
+
+// incomplete gamma function
+assert(intFIW.integrate((real x) => x).approxEqual(gammaIncompleteCompl(2, 1) * gamma(2)));
+assert(intFIW.integrate((real x) => x^^2).approxEqual(gammaIncompleteCompl(3, 1) * gamma(3)));
+assert(intFIW.integrate((real x) => x^^3).approxEqual(gammaIncompleteCompl(4, 1) * gamma(4)));
 ```
