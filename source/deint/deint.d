@@ -357,3 +357,79 @@ unittest
     // When f(x) = x^^2, int_0^1 x^^2 dx = 1/3
     assert(int01.integrate((real x) => x^^2).approxEqual(1/3.0));
 }
+
+
+
+/** This function create a instance of NumInt!(F, F) for computing fourtier-type integration by the DE formula.
+ * On the DE formula for the fourier-type integration, the integration (1) is converted to (2).
+ * (1) int_0^{inf} g(x) sin(omega * x) dx
+ * (2) sum_{k=-Nlow}^{Nhigh} g(M*phi(h*k)) sin(M*phi(h*k)/omega) M*phi'(h*k)/omega * h
+ * 
+ * Params:
+ *      isSine = `Yes` if the type of integration is "sine". `No` if the type is "cosine".
+ *      omega = angular frequency
+ *      stepH = step value of each interval
+ *      Nlow = number of negative-valued computing points
+ *      Nhigh = number of positive-valued computing points
+ *
+ * Reference:
+ * $(HTTP www.kurims.kyoto-u.ac.jp/~kyodo/kokyuroku/contents/pdf/1040-20.pdf)
+*/
+NumInt!(F, F) makeDEIntFourier(F)(
+    Flag!"isSine" isSine,
+    F omega,
+    F stepH = 0.1,
+    size_t Nlow = 49, size_t Nhigh = 50)
+{
+    immutable F beta = 1.0L/4;
+    immutable F h = stepH;
+    immutable F M = PI / h;
+    immutable F alpha = beta / sqrt(1 + M*log(1 + M)/(4*PI));
+
+    F[2] phi(F t) {
+        F num = t;
+        F den = 1 - exp(-2*t - alpha*(1 - exp(-t)) - beta*(exp(t) - 1));
+        F dden = (den - 1) * (-2 - alpha*exp(-t) - beta * exp(t));
+
+        F num2 = den - num * dden;
+        F den2 = den^^2;
+
+        if(abs(t) < 1E-3) {
+            F ddden = (den-1) * (-2 - alpha*exp(-t) - beta * exp(t))^^2
+                    + (den-1) * (   + alpha*exp(-t) - beta * exp(t));
+
+            num = 1;
+            den = dden;
+
+            num2 = dden - (dden + num * ddden);
+            den2 = 2*den*dden;
+        }
+
+        return [num/den, num2/den2];
+    }
+
+    immutable(F)[] xs;
+    immutable(F)[] ws;
+
+    foreach(long i; -cast(long)Nlow .. cast(long)Nhigh) {
+        F t = h * i;
+        if(isSine) {
+            auto p = phi(t);
+            xs ~= M * p[0] / omega;
+            ws ~= M * p[1] / omega * h;
+        } else {
+            auto p = phi(t - PI/(2*M));
+            xs ~= M * p[0] / omega;
+            ws ~= M * p[1] / omega * h;
+        }
+    }
+
+    return NumInt!(F, F)(xs, ws);
+}
+
+unittest {
+    auto de = makeDEIntFourier!real(Yes.isSine, 1, 0.2);
+    auto dirichlet = de.integrate((real x) => sin(x)/x);
+
+    assert(dirichlet.approxEqual(PI/2));
+}
