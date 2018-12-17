@@ -150,28 +150,31 @@ NumInt!(F, F) makeDEInt(F)(
             }
         });
     }else{
-        if(xa == -xb){
+        if(xa == 0){
             return _makeParamsImpl(delegate(F t){
                 immutable F
                     cosht = cosh(t),
                     sinht = sinh(t),
-                    x = tanh(PI / 2 * sinht) * xb,
+                    epsinht = exp(PI * sinht),
+                    x = epsinht/(1 + epsinht) * xb,
                     cosh2 = cosh(PI / 2 * sinht)^^2,
                     dx = PI / 2 * cosht / cosh2;
 
-                return cast(F[2])[x, dx * xb];
+                return cast(F[2])[x, dx * xb/2];
             });
         }else{
+            immutable F diff2 = (xb - xa)/2;
+            immutable F avg2 = (xb + xa)/2;
+
             return _makeParamsImpl(delegate(F t){
                 immutable F
                     cosht = cosh(t),
                     sinht = sinh(t),
-                    epsinht = exp(PI * sinh(t)),
-                    x = (xa + xb * epsinht)/(1 + epsinht),
+                    x = tanh(PI / 2 * sinht) * diff2 + avg2,
                     cosh2 = cosh(PI / 2 * sinht)^^2,
                     dx = PI / 2 * cosht / cosh2;
 
-                return cast(F[2])[x, dx * (xb - xa)/2];
+                return cast(F[2])[x, dx * diff2];
             });
         }
     }
