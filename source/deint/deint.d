@@ -150,19 +150,30 @@ NumInt!(F, F) makeDEInt(F)(
             }
         });
     }else{
-        immutable F diff2 = (xb - xa) / 2,
-                    avg2 = (xb + xa) / 2;
+        if(xa == -xb){
+            return _makeParamsImpl(delegate(F t){
+                immutable F
+                    cosht = cosh(t),
+                    sinht = sinh(t),
+                    x = tanh(PI / 2 * sinht) * xb,
+                    cosh2 = cosh(PI / 2 * sinht)^^2,
+                    dx = PI / 2 * cosht / cosh2;
 
-        return _makeParamsImpl(delegate(F t){
-            immutable F
-                cosht = cosh(t),
-                sinht = sinh(t),
-                x = tanh(PI / 2 * sinht) * diff2 + avg2,
-                cosh2 = cosh(PI / 2 * sinht)^^2,
-                dx = PI / 2 * cosht / cosh2;
+                return cast(F[2])[x, dx * xb];
+            });
+        }else{
+            return _makeParamsImpl(delegate(F t){
+                immutable F
+                    cosht = cosh(t),
+                    sinht = sinh(t),
+                    epsinht = exp(PI * sinh(t)),
+                    x = (xa + xb * epsinht)/(1 + epsinht),
+                    cosh2 = cosh(PI / 2 * sinht)^^2,
+                    dx = PI / 2 * cosht / cosh2;
 
-            return cast(F[2])[x, dx * diff2];
-        });
+                return cast(F[2])[x, dx * (xb - xa)/2];
+            });
+        }
     }
 }
 
@@ -179,6 +190,14 @@ unittest
     // int_0^1 x^^2 dx = 1/3
     assert(int01.integrate((real x) => x^^2).approxEqual(1/3.0));
 
+    // int_0^1 log(x)/sqrt(x) dx = -4
+    assert(int01.integrate((real x) => log(x)/sqrt(x)).approxEqual(-4, 1E-12, 1E-12));
+
+    // integration on [-1, 1]
+    auto int11 = makeDEInt!real(-1, 1);
+
+    // int_{-1}^1 1/sqrt(1-x^2) dx = pi
+    assert(int11.integrate((real x) => 1/(1 + x^^2)).approxEqual(PI/2, 1E-12, 1E-12));
 
     // integration on [-inf, inf]
     auto intII = makeDEInt!real(-real.infinity, real.infinity);
