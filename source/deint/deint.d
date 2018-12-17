@@ -150,17 +150,17 @@ NumInt!(F, F) makeDEInt(F)(
             }
         });
     }else{
-        if(xa == 0){
+        if(xa == 0 || xb == 0){
             return _makeParamsImpl(delegate(F t){
                 immutable F
                     cosht = cosh(t),
                     sinht = sinh(t),
                     epsinht = exp(PI * sinht),
-                    x = epsinht/(1 + epsinht) * xb,
+                    x = (xa + xb*epsinht)/(1 + epsinht),
                     cosh2 = cosh(PI / 2 * sinht)^^2,
                     dx = PI / 2 * cosht / cosh2;
 
-                return cast(F[2])[x, dx * xb/2];
+                return cast(F[2])[x, dx * (xb - xa)/2];
             });
         }else{
             immutable F diff2 = (xb - xa)/2;
@@ -195,6 +195,9 @@ unittest
 
     // int_0^1 log(x)/sqrt(x) dx = -4
     assert(int01.integrate((real x) => log(x)/sqrt(x)).approxEqual(-4, 1E-12, 1E-12));
+
+    // int_{-1}^0 log(-x)/sqrt(-x) dx = -4
+    assert(makeDEInt!real(-1, 0).integrate((real x) => log(-x)/sqrt(-x)).approxEqual(-4, 1E-12, 1E-12));
 
     // integration on [-1, 1]
     auto int11 = makeDEInt!real(-1, 1);
