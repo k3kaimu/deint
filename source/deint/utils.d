@@ -20,6 +20,8 @@ auto withWeight(Int, Fn)(auto ref Int integ, Fn weightFn)
     auto ws = integ.ws;
     // return IntWithWeight!(X, W)(integ.xs, integ.ws, weightFn);
     immutable(W)[] newws;
+    if (!__ctfe)
+        newws.reserve(xs.length);
     foreach(i, x; xs)
         newws ~= weightFn(x) * ws[i];
 
@@ -49,6 +51,11 @@ NumInt!(F, F) makeTrapInt(F)(F xa, F xb, size_t N, Flag!"isPeriodic" isPeriodic 
 {
     immutable(F)[] xs;
     immutable(F)[] ws;
+    if (!__ctfe)
+    {
+        xs.reserve(N);
+        ws.reserve(N);
+    }
 
     if(!isPeriodic) {
         F h = (xb - xa) / (N-1);

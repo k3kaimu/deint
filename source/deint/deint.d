@@ -100,6 +100,11 @@ NumInt!(F, F) makeDEInt(F)(
     {
         immutable(F)[] xs;
         immutable(F)[] ws;
+        if (!__ctfe)
+        {
+            xs.reserve(trapN);
+            ws.reserve(trapN);
+        }
         immutable F h = (tb - ta) / (trapN-1);
         foreach(i; 0 .. trapN) {
             immutable xWt = fn(i * h + ta);
@@ -435,6 +440,11 @@ NumInt!(F, F) makeDEIntFourier(F)(
 
     immutable(F)[] xs;
     immutable(F)[] ws;
+    if (!__ctfe)
+    {
+        xs.reserve(Nlow + Nhigh);
+        ws.reserve(Nlow + Nhigh);
+    }
 
     foreach(long i; -cast(long)Nlow .. cast(long)Nhigh) {
         F t = h * i;
